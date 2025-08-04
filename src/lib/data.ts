@@ -65,7 +65,6 @@ const getStaticRaceData = (): RaceEvent[] => {
     return {
       id: cat.id!,
       category: cat.category!,
-      categoryFullName: cat.category!,
       Icon: cat.Icon!,
       circuitName: 'Autódromo Placeholder',
       location: 'Ciudad Genérica, Provincia Genérica',
@@ -153,7 +152,6 @@ export const getRaceData = async (): Promise<RaceEvent[]> => {
                         nextRace = {
                             id: categoryInfo.id!,
                             category: categoryInfo.category!,
-                            categoryFullName: categoryInfo.category!,
                             Icon: categoryInfo.Icon!,
                             circuitName,
                             location,
@@ -208,13 +206,12 @@ export const getRaceData = async (): Promise<RaceEvent[]> => {
                         nextRace = {
                             id: categoryInfo.id!,
                             category: categoryInfo.category!,
-                            categoryFullName: categoryInfo.category!,
                             Icon: categoryInfo.Icon!,
                             circuitName,
                             location,
                             date: raceDate.toISOString(), // Use the parsed date directly
                             schedule: [],
-                            circuitImage: image ? `https://www.tc2000.com.ar/${image}` : 'https://placehold.co/600x400.png',
+                            circuitImage: image ? image : 'https://placehold.co/600x400.png',
                             circuitImageHint: 'race track',
                             calendarUrl: categoryInfo.url,
                         };
