@@ -17,7 +17,7 @@ export default async function Home() {
       </header>
       <main className="flex-grow container mx-auto px-4 py-8 md:py-12">
          {raceData.length > 0 ? (
-            <section className="grid grid-cols-1 md:grid-cols-2 gap-8 justify-items-center">
+            <section className="flex flex-col items-center gap-8">
               {raceData.map((race) => (
                 <RaceCard key={race.id} race={race} />
               ))}

@@ -6,18 +6,19 @@ interface CountdownTimerProps {
   targetDate: string;
 }
 
-const calculateTimeLeft = (targetDate: string) => {
-  // Add 3 hours to the target date
+interface TimeLeft {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+}
+
+const calculateTimeLeft = (targetDate: string): TimeLeft => {
   const targetTime = new Date(targetDate);
   targetTime.setHours(targetTime.getHours() + 3);
 
   const difference = +targetTime - +new Date();
-  let timeLeft = {
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  };
+  let timeLeft: TimeLeft = { days: 0, hours: 0, minutes: 0, seconds: 0 };
 
   if (difference > 0) {
     timeLeft = {
@@ -27,31 +28,28 @@ const calculateTimeLeft = (targetDate: string) => {
       seconds: Math.floor((difference / 1000) % 60),
     };
   }
-
   return timeLeft;
 };
 
+
 const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate }) => {
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   useEffect(() => {
-    // Set initial value on client mount to avoid hydration mismatch
     setTimeLeft(calculateTimeLeft(targetDate));
-
     const timer = setInterval(() => {
       setTimeLeft(calculateTimeLeft(targetDate));
     }, 1000);
-
     return () => clearInterval(timer);
   }, [targetDate]);
 
   const timerComponents = [
-    { label: 'D', value: timeLeft.days },
-    { label: 'H', value: timeLeft.hours },
-    { label: 'M', value: timeLeft.minutes },
-    { label: 'S', value: timeLeft.seconds },
+    { label: 'Días', value: timeLeft.days },
+    { label: 'Horas', value: timeLeft.hours },
+    { label: 'Min', value: timeLeft.minutes },
+    { label: 'Seg', value: timeLeft.seconds },
   ];
-
+  
   const allZero = Object.values(timeLeft).every(value => value === 0);
 
   if (allZero) {
@@ -61,6 +59,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate }) => {
       </div>
     );
   }
+
 
   return (
     <div className="grid grid-cols-4 gap-2 text-center my-4">
@@ -76,6 +75,33 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate }) => {
       ))}
     </div>
   );
+};
+
+export const CalculatedDate: React.FC<CountdownTimerProps> = ({ targetDate }) => {
+    const [startDate, setStartDate] = useState<Date | null>(null);
+
+    useEffect(() => {
+        const targetTime = new Date(targetDate);
+        targetTime.setHours(targetTime.getHours() + 3);
+        setStartDate(targetTime);
+    }, [targetDate]);
+
+    if (!startDate) {
+        return <span>Calculando fecha...</span>;
+    }
+
+    return (
+        <span>
+            Inicia: {startDate.toLocaleDateString('es-AR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            })} hs
+        </span>
+    );
 };
 
 export default CountdownTimer;
