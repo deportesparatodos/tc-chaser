@@ -22,6 +22,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'www.tc2000.com.ar',
+        port: '',
+        pathname: '/**',
+      }
     ],
   },
 };

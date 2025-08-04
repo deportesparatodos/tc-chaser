@@ -1,83 +1,112 @@
 import { CarFront, Truck } from 'lucide-react';
 import type { RaceEvent } from '@/types';
+import * as cheerio from 'cheerio';
 
 const countdownRegex = /year\s*=\s*(\d{4});\s*month\s*=\s*(\d{1,2});\s*day\s*=\s*(\d{1,2});\s*hour\s*=\s*(\d{1,2});\s*min\s*=\s*(\d{1,2});/;
 
-const categoryMappings: { [key: string]: Partial<RaceEvent> } = {
+const categoryMappings: { [key: string]: Partial<RaceEvent> & { url: string, type: 'actc' | 'tc2000' } } = {
   tc: {
     id: 'tc',
     category: 'Turismo Carretera',
     Icon: CarFront,
+    url: 'https://actc.org.ar/tc/calendario.html',
+    type: 'actc',
   },
   tcp: {
     id: 'tcp',
     category: 'TC Pista',
     Icon: CarFront,
+    url: 'https://actc.org.ar/tcp/calendario.html',
+    type: 'actc',
   },
   tcm: {
     id: 'tcm',
     category: 'TC Mouras',
     Icon: CarFront,
+    url: 'https://actc.org.ar/tcm/calendario.html',
+    type: 'actc',
   },
   tcpm: {
     id: 'tcpm',
     category: 'TC Pista Mouras',
     Icon: CarFront,
+    url: 'https://actc.org.ar/tcpm/calendario.html',
+    type: 'actc',
   },
   tcpk: {
     id: 'tcpk',
     category: 'TC Pick Up',
     Icon: Truck,
+    url: 'https://actc.org.ar/tcpk/calendario.html',
+    type: 'actc',
   },
   tcppk: {
     id: 'tcppk',
     category: 'TC Pista Pick Up',
     Icon: Truck,
+    url: 'https://actc.org.ar/tcppk/calendario.html',
+    type: 'actc',
   },
+  tc2000: {
+    id: 'tc2000',
+    category: 'TC2000',
+    Icon: CarFront,
+    url: 'https://tc2000.com.ar/carreras.php?evento=calendario',
+    type: 'tc2000',
+  }
 };
 
 const getStaticRaceData = (): RaceEvent[] => {
   console.warn("Using static race data due to a fallback.");
   const now = new Date();
-  return Object.keys(categoryMappings).map((key, index) => {
-    const cat = categoryMappings[key as keyof typeof categoryMappings];
+  return Object.values(categoryMappings).map((cat, index) => {
     const raceDate = new Date(now);
     raceDate.setDate(now.getDate() + 7 * (index + 1));
     return {
       id: cat.id!,
       category: cat.category!,
-      categoryFullName: cat.categoryFullName!,
+      categoryFullName: cat.category!,
       Icon: cat.Icon!,
       circuitName: 'Autódromo Placeholder',
       location: 'Ciudad Genérica, Provincia Genérica',
       date: raceDate.toISOString(),
-      schedule: [
-        { day: 'Viernes', activity: 'Entrenamiento 1', time: '10:00' },
-        { day: 'Sábado', activity: 'Clasificación', time: '15:00' },
-        { day: 'Domingo', activity: 'Carrera', time: '13:30' },
-      ],
+      schedule: [],
       circuitImage: `https://placehold.co/600x400.png`,
       circuitImageHint: 'race track',
     };
   });
 };
 
-
 const monthMap: { [key: string]: number } = {
     'ene': 0, 'feb': 1, 'mar': 2, 'abr': 3, 'may': 4, 'jun': 5,
     'jul': 6, 'ago': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dic': 11
 };
 
-const parseDate = (day: string, monthStr: string): Date | null => {
+const parseActcDate = (day: string, monthStr: string): Date | null => {
     const month = monthMap[monthStr.toLowerCase()];
     if (month === undefined) return null;
     let year = new Date().getFullYear();
     const currentDate = new Date();
-    // If the month is in the past (e.g., it's November and the race is in February), it's for the next year.
     if (currentDate.getMonth() > month) {
         year += 1;
     }
     return new Date(year, month, parseInt(day, 10));
+}
+
+const parseTc2000Date = (dateStr: string): Date | null => {
+    const [day, month] = dateStr.split('-').map(s => parseInt(s.trim(), 10));
+    if (isNaN(day) || isNaN(month)) return null;
+
+    let year = new Date().getFullYear();
+    const currentDate = new Date();
+    // Month from site is 1-based, Date object is 0-based
+    if (currentDate.getMonth() > (month - 1)) {
+        year += 1;
+    }
+    // Set to the beginning of the day in local time
+    const raceDate = new Date(year, month - 1, day);
+    raceDate.setHours(0, 0, 0, 0);
+    return raceDate;
 }
 
 export const getRaceData = async (): Promise<RaceEvent[]> => {
@@ -86,11 +115,10 @@ export const getRaceData = async (): Promise<RaceEvent[]> => {
 
     for (const key in categoryMappings) {
         const categoryInfo = categoryMappings[key as keyof typeof categoryMappings];
-        const url = `https://actc.org.ar/${key}/calendario.html`;
         
         let response;
         try {
-            response = await fetch(url, { next: { revalidate: 3600 } }); // Cache for 1 hour
+            response = await fetch(categoryInfo.url, { next: { revalidate: 3600 } });
             if (!response.ok) {
                 console.error(`Failed to fetch calendar for ${key}: ${response.statusText}`);
                 continue;
@@ -101,86 +129,99 @@ export const getRaceData = async (): Promise<RaceEvent[]> => {
         }
 
         const html = await response.text();
+        const $ = cheerio.load(html);
         
-        // Use a more robust regex to find all list items
-        const raceElements = html.match(/<li class="col-lg-4 col-md-4 col-sm-4 col-xs-12">[\s\S]*?<\/li>/g);
-
-        if (!raceElements) {
-            continue;
-        }
-
         let nextRace: RaceEvent | null = null;
-        let nextRaceDate: Date | null = null;
 
-        for (const element of raceElements) {
-            const dateMatch = element.match(/<div class="date"><span>(\d+)<\/span>\s*(\w+)<\/div>/);
-            const circuitNameMatch = element.match(/<h2>(.*?)<\/h2>/);
-            const locationMatch = element.match(/<p>(.*?)<\/p>/);
-            const imageMatch = element.match(/<img class="lazy img-responsive" data-original="(.*?)"/);
-            
-            if (dateMatch && circuitNameMatch && locationMatch) {
-                const day = dateMatch[1];
-                const month = dateMatch[2];
-                const raceDate = parseDate(day, month);
+        if (categoryInfo.type === 'actc') {
+            const raceElements = $('.calendario-temporada .info-race');
+            let nextRaceDate: Date | null = null;
 
-                // Find the first upcoming race
+            raceElements.each((_i, el) => {
+                const day = $(el).find('.date span').text().trim();
+                const month = $(el).find('.date').clone().children().remove().end().text().trim();
+                const circuitName = $(el).find('.hd h2').text().trim();
+                const location = $(el).find('.hd p').text().trim();
+                const image = $(el).find('figure img').attr('data-original');
+
+                const raceDate = parseActcDate(day, month);
+
                 if (raceDate && raceDate >= new Date()) {
                     if (!nextRaceDate || raceDate < nextRaceDate) {
                         nextRaceDate = raceDate;
                         nextRace = {
                             id: categoryInfo.id!,
                             category: categoryInfo.category!,
-                            categoryFullName: categoryInfo.categoryFullName!,
+                            categoryFullName: categoryInfo.category!,
                             Icon: categoryInfo.Icon!,
-                            circuitName: circuitNameMatch[1].trim(),
-                            location: locationMatch[1].trim(),
-                            date: '', // Will be updated by countdown scraper
-                            schedule: [], // Placeholder for now
-                            circuitImage: imageMatch ? `https://actc.org.ar${imageMatch[1]}` : 'https://placehold.co/600x400.png',
+                            circuitName,
+                            location,
+                            date: '', // Will be updated later
+                            schedule: [],
+                            circuitImage: image ? `https://actc.org.ar${image}` : 'https://placehold.co/600x400.png',
                             circuitImageHint: 'race track',
                         };
                     }
                 }
-            }
-        }
-        
-        if (nextRace) {
-            const indexUrl = `https://actc.org.ar/${key}/index.html`;
-             let indexResponse;
-            try {
-                indexResponse = await fetch(indexUrl, { next: { revalidate: 3600 } });
-                if (!indexResponse.ok) {
-                    console.error(`Failed to fetch index page for ${key}: ${indexResponse.statusText}`);
-                } else {
-                    const indexHtml = await indexResponse.text();
-                    const countdownMatch = indexHtml.match(countdownRegex);
-                    
-                    if (countdownMatch) {
-                        const [, year, month, day, hour, min] = countdownMatch;
-                        // The month from regex is 1-based, but Date constructor expects 0-based
-                        const raceDateObj = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(min));
-                        nextRace.date = raceDateObj.toISOString();
+            });
+
+            if (nextRace) {
+                const indexUrl = `https://actc.org.ar/${key}/index.html`;
+                try {
+                    const indexResponse = await fetch(indexUrl, { next: { revalidate: 3600 } });
+                    if (indexResponse.ok) {
+                        const indexHtml = await indexResponse.text();
+                        const countdownMatch = indexHtml.match(countdownRegex);
+                        if (countdownMatch) {
+                            const [, year, month, day, hour, min] = countdownMatch;
+                            const raceDateObj = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(min));
+                            nextRace.date = raceDateObj.toISOString();
+                        }
                     }
+                } catch (error) {
+                    console.error(`Error fetching index page for ${key}:`, error);
                 }
-            } catch (error) {
-                 console.error(`Error fetching index page for ${key}:`, error);
-            }
-            
-            // If countdown fails, use the date from calendar (if available) as a fallback
-            if (!nextRace.date && nextRaceDate) {
-               nextRace.date = nextRaceDate.toISOString();
+                
+                if (!nextRace.date && nextRaceDate) {
+                   nextRace.date = nextRaceDate.toISOString();
+                }
             }
 
-            // Add some mock schedule data since it's not available on the page
-             nextRace.schedule = [
-                { day: 'Viernes', activity: 'Entrenamientos', time: '10:00' },
-                { day: 'Sábado', activity: 'Clasificación', time: '15:00' },
-                { day: 'Domingo', activity: 'Carrera', time: '13:00' },
-            ];
+        } else if (categoryInfo.type === 'tc2000') {
+            const raceElements = $('.box-fechas');
+            let nextRaceDate: Date | null = null;
             
-            if (nextRace.date) { // Only add race if we have a valid date
-              allRaces.push(nextRace);
-            }
+            raceElements.each((_i, el) => {
+                const dateStr = $(el).find('h2 .gris').text().trim();
+                const circuitName = $(el).find('h3').text().trim();
+                 // Location is not explicitly provided, using circuit name as fallback
+                const location = circuitName; 
+                const image = $(el).find('.imagen_autodromo').attr('src');
+                
+                const raceDate = parseTc2000Date(dateStr);
+
+                if (raceDate && raceDate >= new Date()) {
+                     if (!nextRaceDate || raceDate < nextRaceDate) {
+                        nextRaceDate = raceDate;
+                        nextRace = {
+                            id: categoryInfo.id!,
+                            category: categoryInfo.category!,
+                            categoryFullName: categoryInfo.category!,
+                            Icon: categoryInfo.Icon!,
+                            circuitName,
+                            location,
+                            date: raceDate.toISOString(), // Use the parsed date directly
+                            schedule: [],
+                            circuitImage: image ? image : 'https://placehold.co/600x400.png',
+                            circuitImageHint: 'race track',
+                        };
+                    }
+                }
+            });
+        }
+        
+        if (nextRace && nextRace.date) {
+            allRaces.push(nextRace);
         }
     }
 
@@ -192,7 +233,6 @@ export const getRaceData = async (): Promise<RaceEvent[]> => {
     return allRaces.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   } catch (error) {
     console.error('An unexpected error occurred during scraping:', error);
-    // In case of any unexpected error, return static data to prevent app crash
     return getStaticRaceData();
   }
 };
