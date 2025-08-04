@@ -1,4 +1,3 @@
-import { CarFront, Truck } from 'lucide-react';
 import type { RaceEvent } from '@/types';
 import * as cheerio from 'cheerio';
 
@@ -8,49 +7,49 @@ const categoryMappings: { [key: string]: Partial<RaceEvent> & { url: string, typ
   tc: {
     id: 'tc',
     category: 'Turismo Carretera',
-    Icon: CarFront,
+    categoryShortName: 'TC',
     url: 'https://actc.org.ar/tc/calendario.html',
     type: 'actc',
   },
   tcp: {
     id: 'tcp',
     category: 'TC Pista',
-    Icon: CarFront,
+    categoryShortName: 'TCP',
     url: 'https://actc.org.ar/tcp/calendario.html',
     type: 'actc',
   },
   tcm: {
     id: 'tcm',
     category: 'TC Mouras',
-    Icon: CarFront,
+    categoryShortName: 'TCM',
     url: 'https://actc.org.ar/tcm/calendario.html',
     type: 'actc',
   },
   tcpm: {
     id: 'tcpm',
     category: 'TC Pista Mouras',
-    Icon: CarFront,
+    categoryShortName: 'TCPM',
     url: 'https://actc.org.ar/tcpm/calendario.html',
     type: 'actc',
   },
   tcpk: {
     id: 'tcpk',
     category: 'TC Pick Up',
-    Icon: Truck,
+    categoryShortName: 'TCPK',
     url: 'https://actc.org.ar/tcpk/calendario.html',
     type: 'actc',
   },
   tcppk: {
     id: 'tcppk',
     category: 'TC Pista Pick Up',
-    Icon: Truck,
+    categoryShortName: 'TCPPK',
     url: 'https://actc.org.ar/tcppk/calendario.html',
     type: 'actc',
   },
   tc2000: {
     id: 'tc2000',
     category: 'TC2000',
-    Icon: CarFront,
+    categoryShortName: 'TC2000',
     url: 'https://tc2000.com.ar/carreras.php?evento=calendario',
     type: 'tc2000',
   }
@@ -65,7 +64,7 @@ const getStaticRaceData = (): RaceEvent[] => {
     return {
       id: cat.id!,
       category: cat.category!,
-      Icon: cat.Icon!,
+      categoryShortName: cat.categoryShortName!,
       circuitName: 'Autódromo Placeholder',
       location: 'Ciudad Genérica, Provincia Genérica',
       date: raceDate.toISOString(),
@@ -152,7 +151,7 @@ export const getRaceData = async (): Promise<RaceEvent[]> => {
                         nextRace = {
                             id: categoryInfo.id!,
                             category: categoryInfo.category!,
-                            Icon: categoryInfo.Icon!,
+                            categoryShortName: categoryInfo.categoryShortName!,
                             circuitName,
                             location,
                             date: '', // Will be updated later
@@ -196,9 +195,13 @@ export const getRaceData = async (): Promise<RaceEvent[]> => {
                 const circuitName = $(el).find('h3').text().trim();
                  // Location is not explicitly provided, using circuit name as fallback
                 const location = circuitName; 
-                const image = $(el).find('.imagen_autodromo').attr('src');
+                let image = $(el).find('.imagen_autodromo').attr('src');
                 
                 const raceDate = parseTc2000Date(dateStr);
+                
+                if (image && !image.startsWith('http')) {
+                  image = `https://www.tc2000.com.ar/${image}`;
+                }
 
                 if (raceDate && raceDate >= new Date()) {
                      if (!nextRaceDate || raceDate < nextRaceDate) {
@@ -206,7 +209,7 @@ export const getRaceData = async (): Promise<RaceEvent[]> => {
                         nextRace = {
                             id: categoryInfo.id!,
                             category: categoryInfo.category!,
-                            Icon: categoryInfo.Icon!,
+                            categoryShortName: categoryInfo.categoryShortName!,
                             circuitName,
                             location,
                             date: raceDate.toISOString(), // Use the parsed date directly

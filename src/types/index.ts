@@ -1,10 +1,8 @@
-import type { LucideIcon } from "lucide-react";
 
 export interface RaceEvent {
   id: string;
   category: string;
-  categoryFullName: string;
-  Icon: LucideIcon;
+  categoryShortName: string;
   circuitName: string;
   location: string;
   date: string;

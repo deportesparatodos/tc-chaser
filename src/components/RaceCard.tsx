@@ -1,4 +1,7 @@
+"use client";
+
 import Image from 'next/image';
+import { CalendarIcon } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -23,6 +26,14 @@ export function RaceCard({ race }: RaceCardProps) {
   } = race;
 
   const province = location.split(',')[0] || location;
+  
+  const handleAddToCalendar = () => {
+    if (typeof window !== 'undefined') {
+      const calendarUrl = `webcal://${window.location.host}/api/calendar/${race.id}`;
+      window.location.href = calendarUrl;
+    }
+  };
+
 
   return (
     <Card className="w-full max-w-2xl overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 bg-card group">
@@ -49,6 +60,14 @@ export function RaceCard({ race }: RaceCardProps) {
            <div className="flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground mt-4">
                 <CalculatedDate targetDate={date} />
            </div>
+
+            <button 
+                onClick={handleAddToCalendar}
+                className="mt-4 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              >
+                <CalendarIcon className="w-4 h-4" />
+                Añadir al Calendario
+            </button>
         </CardContent>
       </div>
     </Card>
