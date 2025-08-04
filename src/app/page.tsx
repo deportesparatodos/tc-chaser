@@ -1,6 +1,7 @@
 import { getRaceData } from '@/lib/data';
 import { RaceCard } from '@/components/RaceCard';
 import { Logo } from '@/components/ui/logo';
+import { FooterActions } from '@/components/FooterActions';
 
 export default async function Home() {
   const raceData = await getRaceData();
@@ -30,7 +31,8 @@ export default async function Home() {
           )}
       </main>
        <footer className="text-center py-6 px-4 border-t border-gray-800 text-muted-foreground text-sm">
-        <p>Desarrollado con ♥ para los fanáticos del automovilismo.</p>
+        <FooterActions />
+        <p className="mt-4">Desarrollado con ♥ para los fanáticos del automovilismo.</p>
         <p>TC Chaser &copy; {new Date().getFullYear()}</p>
       </footer>
     </div>
