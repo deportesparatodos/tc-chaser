@@ -1,44 +1,37 @@
 import { CarFront, Truck } from 'lucide-react';
 import type { RaceEvent } from '@/types';
 
-// Regular expression to extract the countdown date from the script tag
-const countdownRegex = /year = (\d{4}); month = (\d{1,2});\s+day = (\d{1,2});\s+hour = (\d{1,2}); min\s+=\s*(\d{1,2});/;
+const countdownRegex = /year\s*=\s*(\d{4});\s*month\s*=\s*(\d{1,2});\s*day\s*=\s*(\d{1,2});\s*hour\s*=\s*(\d{1,2});\s*min\s*=\s*(\d{1,2});/;
 
 const categoryMappings: { [key: string]: Partial<RaceEvent> } = {
   tc: {
     id: 'tc',
-    category: 'TC',
-    categoryFullName: 'Turismo Carretera',
+    category: 'Turismo Carretera',
     Icon: CarFront,
   },
   tcp: {
     id: 'tcp',
-    category: 'TCP',
-    categoryFullName: 'TC Pista',
+    category: 'TC Pista',
     Icon: CarFront,
   },
   tcm: {
     id: 'tcm',
-    category: 'TCM',
-    categoryFullName: 'TC Mouras',
+    category: 'TC Mouras',
     Icon: CarFront,
   },
   tcpm: {
     id: 'tcpm',
-    category: 'TCPM',
-    categoryFullName: 'TC Pista Mouras',
+    category: 'TC Pista Mouras',
     Icon: CarFront,
   },
   tcpk: {
     id: 'tcpk',
-    category: 'TCPK',
-    categoryFullName: 'TC Pick Up',
+    category: 'TC Pick Up',
     Icon: Truck,
   },
   tcppk: {
     id: 'tcppk',
-    category: 'TCPPK',
-    categoryFullName: 'TC Pista Pick Up',
+    category: 'TC Pista Pick Up',
     Icon: Truck,
   },
 };
@@ -56,7 +49,7 @@ const getStaticRaceData = (): RaceEvent[] => {
       categoryFullName: cat.categoryFullName!,
       Icon: cat.Icon!,
       circuitName: 'Autódromo Placeholder',
-      location: 'Ciudad Genérica',
+      location: 'Ciudad Genérica, Provincia Genérica',
       date: raceDate.toISOString(),
       schedule: [
         { day: 'Viernes', activity: 'Entrenamiento 1', time: '10:00' },
@@ -78,22 +71,26 @@ const monthMap: { [key: string]: number } = {
 const parseDate = (day: string, monthStr: string): Date | null => {
     const month = monthMap[monthStr.toLowerCase()];
     if (month === undefined) return null;
-    const year = new Date().getFullYear();
+    let year = new Date().getFullYear();
+    const currentDate = new Date();
+    // If the month is in the past (e.g., it's November and the race is in February), it's for the next year.
+    if (currentDate.getMonth() > month) {
+        year += 1;
+    }
     return new Date(year, month, parseInt(day, 10));
 }
 
 export const getRaceData = async (): Promise<RaceEvent[]> => {
   try {
     const allRaces: RaceEvent[] = [];
-    const currentYear = new Date().getFullYear();
 
     for (const key in categoryMappings) {
-        const category = categoryMappings[key as keyof typeof categoryMappings];
+        const categoryInfo = categoryMappings[key as keyof typeof categoryMappings];
         const url = `https://actc.org.ar/${key}/calendario.html`;
         
         let response;
         try {
-            response = await fetch(url);
+            response = await fetch(url, { next: { revalidate: 3600 } }); // Cache for 1 hour
             if (!response.ok) {
                 console.error(`Failed to fetch calendar for ${key}: ${response.statusText}`);
                 continue;
@@ -104,6 +101,8 @@ export const getRaceData = async (): Promise<RaceEvent[]> => {
         }
 
         const html = await response.text();
+        
+        // Use a more robust regex to find all list items
         const raceElements = html.match(/<li class="col-lg-4 col-md-4 col-sm-4 col-xs-12">[\s\S]*?<\/li>/g);
 
         if (!raceElements) {
@@ -118,23 +117,24 @@ export const getRaceData = async (): Promise<RaceEvent[]> => {
             const circuitNameMatch = element.match(/<h2>(.*?)<\/h2>/);
             const locationMatch = element.match(/<p>(.*?)<\/p>/);
             const imageMatch = element.match(/<img class="lazy img-responsive" data-original="(.*?)"/);
-
+            
             if (dateMatch && circuitNameMatch && locationMatch) {
                 const day = dateMatch[1];
                 const month = dateMatch[2];
                 const raceDate = parseDate(day, month);
 
+                // Find the first upcoming race
                 if (raceDate && raceDate >= new Date()) {
                     if (!nextRaceDate || raceDate < nextRaceDate) {
                         nextRaceDate = raceDate;
                         nextRace = {
-                            id: category.id!,
-                            category: category.category!,
-                            categoryFullName: category.categoryFullName!,
-                            Icon: category.Icon!,
-                            circuitName: circuitNameMatch[1],
-                            location: locationMatch[1],
-                            date: '', // Will be updated later
+                            id: categoryInfo.id!,
+                            category: categoryInfo.category!,
+                            categoryFullName: categoryInfo.categoryFullName!,
+                            Icon: categoryInfo.Icon!,
+                            circuitName: circuitNameMatch[1].trim(),
+                            location: locationMatch[1].trim(),
+                            date: '', // Will be updated by countdown scraper
                             schedule: [], // Placeholder for now
                             circuitImage: imageMatch ? `https://actc.org.ar${imageMatch[1]}` : 'https://placehold.co/600x400.png',
                             circuitImageHint: 'race track',
@@ -148,44 +148,44 @@ export const getRaceData = async (): Promise<RaceEvent[]> => {
             const indexUrl = `https://actc.org.ar/${key}/index.html`;
              let indexResponse;
             try {
-                indexResponse = await fetch(indexUrl);
+                indexResponse = await fetch(indexUrl, { next: { revalidate: 3600 } });
                 if (!indexResponse.ok) {
                     console.error(`Failed to fetch index page for ${key}: ${indexResponse.statusText}`);
                 } else {
                     const indexHtml = await indexResponse.text();
                     const countdownMatch = indexHtml.match(countdownRegex);
+                    
                     if (countdownMatch) {
                         const [, year, month, day, hour, min] = countdownMatch;
-                         // The month from regex is 1-based, but Date constructor expects 0-based
+                        // The month from regex is 1-based, but Date constructor expects 0-based
                         const raceDateObj = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(min));
                         nextRace.date = raceDateObj.toISOString();
-                    } else {
-                        // Fallback to date from calendar if countdown not found
-                        if(nextRaceDate) {
-                           nextRace.date = nextRaceDate.toISOString();
-                        }
                     }
                 }
             } catch (error) {
                  console.error(`Error fetching index page for ${key}:`, error);
-                 if(nextRaceDate) {
-                    nextRace.date = nextRaceDate.toISOString();
-                 }
+            }
+            
+            // If countdown fails, use the date from calendar (if available) as a fallback
+            if (!nextRace.date && nextRaceDate) {
+               nextRace.date = nextRaceDate.toISOString();
             }
 
             // Add some mock schedule data since it's not available on the page
              nextRace.schedule = [
-                { day: 'Viernes', activity: 'Entrenamiento 1', time: '10:00' },
+                { day: 'Viernes', activity: 'Entrenamientos', time: '10:00' },
                 { day: 'Sábado', activity: 'Clasificación', time: '15:00' },
-                { day: 'Domingo', activity: 'Carrera', time: '13:30' },
+                { day: 'Domingo', activity: 'Carrera', time: '13:00' },
             ];
-
-            allRaces.push(nextRace);
+            
+            if (nextRace.date) { // Only add race if we have a valid date
+              allRaces.push(nextRace);
+            }
         }
     }
 
     if (allRaces.length === 0) {
-        console.error("Scraping finished, but no race data was found. Falling back to static data.");
+        console.error("Scraping finished, but no upcoming race data was found. Falling back to static data.");
         return getStaticRaceData();
     }
     

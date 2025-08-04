@@ -7,7 +7,11 @@ interface CountdownTimerProps {
 }
 
 const calculateTimeLeft = (targetDate: string) => {
-  const difference = +new Date(targetDate) - +new Date();
+  // Add 3 hours to the target date
+  const targetTime = new Date(targetDate);
+  targetTime.setHours(targetTime.getHours() + 3);
+
+  const difference = +targetTime - +new Date();
   let timeLeft = {
     days: 0,
     hours: 0,
@@ -42,30 +46,30 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate }) => {
   }, [targetDate]);
 
   const timerComponents = [
-    { label: 'Días', value: timeLeft.days },
-    { label: 'Horas', value: timeLeft.hours },
-    { label: 'Minutos', value: timeLeft.minutes },
-    { label: 'Segundos', value: timeLeft.seconds },
+    { label: 'D', value: timeLeft.days },
+    { label: 'H', value: timeLeft.hours },
+    { label: 'M', value: timeLeft.minutes },
+    { label: 'S', value: timeLeft.seconds },
   ];
 
   const allZero = Object.values(timeLeft).every(value => value === 0);
 
   if (allZero) {
     return (
-      <div className="text-center text-lg font-bold text-primary animate-pulse p-4 bg-muted rounded-lg">
+      <div className="text-center text-lg font-bold text-primary animate-pulse p-4 bg-muted/20 rounded-lg">
         ¡La carrera ha comenzado!
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-4 gap-2 md:gap-4 text-center">
+    <div className="grid grid-cols-4 gap-2 text-center my-4">
       {timerComponents.map((component, index) => (
-        <div key={index} className="bg-muted p-2 md:p-3 rounded-lg shadow-inner transition-transform duration-300 hover:scale-105">
-          <div className="text-2xl md:text-3xl font-black text-primary tracking-tighter tabular-nums">
+        <div key={index} className="bg-transparent p-2 rounded-lg">
+          <div className="text-4xl font-black text-primary tracking-tighter tabular-nums">
             {String(component.value).padStart(2, '0')}
           </div>
-          <div className="text-xs text-muted-foreground uppercase tracking-wider">
+          <div className="text-xs text-card-foreground/80 uppercase tracking-wider">
             {component.label}
           </div>
         </div>

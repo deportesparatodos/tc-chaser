@@ -2,9 +2,6 @@ import Image from 'next/image';
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import {
   Accordion,
@@ -23,9 +20,7 @@ interface RaceCardProps {
 
 export function RaceCard({ race }: RaceCardProps) {
   const {
-    Icon,
     category,
-    categoryFullName,
     circuitName,
     location,
     date,
@@ -35,65 +30,57 @@ export function RaceCard({ race }: RaceCardProps) {
   } = race;
 
   const raceDate = new Date(date);
+  raceDate.setHours(raceDate.getHours() + 3);
+
+  // Extract province from location
+  const province = location.split(',')[0] || location;
+
 
   return (
-    <Card className="w-full max-w-sm overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 bg-card group">
-      <CardHeader className="flex flex-row items-center gap-4 p-4 bg-primary text-primary-foreground">
-        <Icon className="w-10 h-10" />
-        <div>
-          <CardTitle className="text-2xl font-bold">{category}</CardTitle>
-          <CardDescription className="text-primary-foreground/80">
-            {categoryFullName}
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="relative w-full h-48">
+    <Card className="w-full max-w-2xl overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 bg-card group">
+      <div className="flex flex-col md:flex-row">
+        <div className="relative w-full md:w-1/3 h-64 md:h-auto">
           <Image
             src={circuitImage}
             alt={`Circuito ${circuitName}`}
             fill
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            className="object-cover"
             data-ai-hint={circuitImageHint}
           />
         </div>
-        <div className="p-4 space-y-4">
-          <div className="text-center space-y-1">
-            <h3 className="text-xl font-semibold">{circuitName}</h3>
-            <p className="flex items-center justify-center gap-2 text-muted-foreground">
-              <MapPin className="w-4 h-4" />
-              {location}
-            </p>
-          </div>
+        
+        <CardContent className="p-4 md:p-6 flex-1">
+            <h3 className="text-xl font-bold text-card-foreground">{circuitName}</h3>
+            <p className="font-semibold text-primary mb-2">{province}</p>
+
+            <CountdownTimer targetDate={date} />
           
-          <CountdownTimer targetDate={date} />
-          
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="item-1">
-              <AccordionTrigger className="text-base font-medium">
-                Ver Cronograma
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-3 pt-2">
-                   <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                        <Calendar className="w-4 h-4 text-primary" />
-                        <span>{raceDate.toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                   </div>
-                  {schedule.map((item, index) => (
-                    <div key={index} className="flex justify-between items-center text-sm p-2 rounded-md bg-muted/50">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-muted-foreground" />
-                        <span>{item.day}: {item.activity}</span>
-                      </div>
-                      <span className="font-mono font-semibold text-primary">{item.time} hs</span>
-                    </div>
-                  ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
-      </CardContent>
+            <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="item-1">
+                    <AccordionTrigger className="text-base font-medium">
+                        <h4 className="text-lg font-bold text-card-foreground">{category}</h4>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                        <div className="space-y-3 pt-2">
+                        {schedule.map((item, index) => (
+                            <div key={index} className="flex justify-between items-center text-sm p-2 rounded-md bg-muted/50">
+                            <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-muted-foreground" />
+                                <span>{item.day}: {item.activity}</span>
+                            </div>
+                            <span className="font-mono font-semibold text-primary">{item.time} hs</span>
+                            </div>
+                        ))}
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
+             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mt-4">
+                <Calendar className="w-4 h-4 text-primary" />
+                <span>Fecha de inicio: {raceDate.toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })} hs</span>
+           </div>
+        </CardContent>
+      </div>
     </Card>
   );
 }
