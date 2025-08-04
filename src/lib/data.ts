@@ -73,6 +73,7 @@ const getStaticRaceData = (): RaceEvent[] => {
       schedule: [],
       circuitImage: `https://placehold.co/600x400.png`,
       circuitImageHint: 'race track',
+      calendarUrl: cat.url,
     };
   });
 };
@@ -160,6 +161,7 @@ export const getRaceData = async (): Promise<RaceEvent[]> => {
                             schedule: [],
                             circuitImage: image ? `https://actc.org.ar${image}` : 'https://placehold.co/600x400.png',
                             circuitImageHint: 'race track',
+                            calendarUrl: categoryInfo.url,
                         };
                     }
                 }
@@ -212,8 +214,9 @@ export const getRaceData = async (): Promise<RaceEvent[]> => {
                             location,
                             date: raceDate.toISOString(), // Use the parsed date directly
                             schedule: [],
-                            circuitImage: image ? image : 'https://placehold.co/600x400.png',
+                            circuitImage: image ? `https://www.tc2000.com.ar/${image}` : 'https://placehold.co/600x400.png',
                             circuitImageHint: 'race track',
+                            calendarUrl: categoryInfo.url,
                         };
                     }
                 }

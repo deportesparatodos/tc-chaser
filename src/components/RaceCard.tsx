@@ -19,13 +19,16 @@ export function RaceCard({ race }: RaceCardProps) {
     date,
     circuitImage,
     circuitImageHint,
+    calendarUrl,
   } = race;
 
   const province = location.split(',')[0] || location;
 
   return (
     <Card className="w-full max-w-2xl overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 bg-card group">
-       <h3 className="text-xl font-bold text-card-foreground text-center py-4 bg-card-foreground/5">{category}</h3>
+       <a href={calendarUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">
+        <h3 className="text-xl font-bold text-card-foreground text-center py-4 bg-card-foreground/5">{category}</h3>
+      </a>
       <div className="flex flex-col md:flex-row">
         <div className="relative w-full md:w-1/3 h-64 md:h-auto bg-white flex items-center justify-center">
           <Image

@@ -11,4 +11,5 @@ export interface RaceEvent {
   schedule: { day: string; activity: string; time: string }[];
   circuitImage: string;
   circuitImageHint: string;
+  calendarUrl: string;
 }
