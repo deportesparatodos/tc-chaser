@@ -90,6 +90,12 @@ export const CalculatedDate: React.FC<CountdownTimerProps> = ({ targetDate }) =>
         return <span>Calculando fecha...</span>;
     }
 
+    const formattedTime = startDate.toLocaleTimeString('es-AR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+    });
+
     return (
         <span>
             Inicia: {startDate.toLocaleDateString('es-AR', {
@@ -97,9 +103,7 @@ export const CalculatedDate: React.FC<CountdownTimerProps> = ({ targetDate }) =>
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            })} hs
+            })} {formattedTime}hs
         </span>
     );
 };
