@@ -34,23 +34,23 @@ export async function GET(
       return new NextResponse('Race not found', { status: 404 });
     }
     
+    // Create date object from UTC string and then adjust to local time for calendar
     const startDate = new Date(race.date);
-    let vEvent: string;
+    startDate.setHours(startDate.getHours() + 3);
 
+    let vEvent: string;
     const summary = `${race.categoryShortName}: ${race.circuitName}`;
     const description = `Carrera de ${race.category} en el autódromo ${race.circuitName}, ubicado en ${race.location}.`;
     const uid = `${race.id}-${startDate.getFullYear()}@tc-chaser.com`;
     const dtstamp = formatDateForICS(new Date());
 
     if (race.id === 'tc2000') {
-        const startOfDay = new Date(startDate);
-        startOfDay.setUTCHours(0, 0, 0, 0);
-
-        const endDay = getNextSunday(new Date(startOfDay));
+        const endDay = getNextSunday(new Date(startDate));
         
-        const dtstart = startOfDay.toISOString().split('T')[0].replace(/-/g, '');
-        const dtend = endDay.toISOString().split('T')[0].replace(/-/g, '');
+        const dtstart = startDate.toISOString().split('T')[0].replace(/-/g, '');
+        // The end date for an all-day event should be the day *after* it ends.
         endDay.setDate(endDay.getDate() + 1);
+        const dtend = endDay.toISOString().split('T')[0].replace(/-/g, '');
 
         vEvent = [
             'BEGIN:VEVENT',
@@ -60,7 +60,7 @@ export async function GET(
             `DESCRIPTION:${description}`,
             `LOCATION:${race.circuitName}, ${race.location}`,
             `DTSTART;VALUE=DATE:${dtstart}`,
-            `DTEND;VALUE=DATE:${endDay.toISOString().split('T')[0].replace(/-/g, '')}`,
+            `DTEND;VALUE=DATE:${dtend}`,
             'END:VEVENT'
         ].join('\r\n');
     } else {
@@ -69,15 +69,15 @@ export async function GET(
         const dtend = formatDateForICS(endDate);
         
         vEvent = [
-            'BEGIN:VEVENT',
-            `UID:${uid}`,
-            `DTSTAMP:${dtstamp}`,
-            `SUMMARY:${summary}`,
-            `DESCRIPTION:${description}`,
-            `LOCATION:${race.circuitName}, ${race.location}`,
-            `DTSTART:${dtstart}`,
-            `DTEND:${dtend}`,
-            'END:VEVENT'
+          'BEGIN:VEVENT',
+          `UID:${uid}`,
+          `DTSTAMP:${dtstamp}`,
+          `SUMMARY:${summary}`,
+          `DESCRIPTION:${description}`,
+          `LOCATION:${race.circuitName}, ${race.location}`,
+          `DTSTART:${dtstart}`,
+          `DTEND:${dtend}`,
+          'END:VEVENT'
         ].join('\r\n');
     }
 
