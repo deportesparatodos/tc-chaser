@@ -10,7 +10,7 @@ function formatDateForICS(date: Date) {
 function getNextSunday(d: Date) {
   const date = new Date(d);
   const day = date.getDay();
-  const diff = (day === 0) ? 0 : (7 - day); // if it's already Sunday, diff is 0
+  const diff = day === 0 ? 0 : 7 - day;
   date.setDate(date.getDate() + diff);
   date.setHours(23, 59, 59, 999);
   return date;
@@ -33,9 +33,8 @@ export async function GET(
     if (!race) {
       return new NextResponse('Race not found', { status: 404 });
     }
-
+    
     const startDate = new Date(race.date);
-    let endDate : Date;
     let vEvent: string;
 
     const summary = `${race.categoryShortName}: ${race.circuitName}`;
@@ -44,44 +43,43 @@ export async function GET(
     const dtstamp = formatDateForICS(new Date());
 
     if (race.id === 'tc2000') {
-      const startOfDay = new Date(startDate);
-      startOfDay.setHours(0, 0, 0, 0);
+        const startOfDay = new Date(startDate);
+        startOfDay.setUTCHours(0, 0, 0, 0);
 
-      const endDay = getNextSunday(new Date(startOfDay)); // Pass a new date object
-      endDay.setDate(endDay.getDate() + 1);
-      
-      const dtstart = startOfDay.toISOString().split('T')[0].replace(/-/g, '');
-      const dtend = endDay.toISOString().split('T')[0].replace(/-/g, '');
-      
-      vEvent = [
-        'BEGIN:VEVENT',
-        `UID:${uid}`,
-        `DTSTAMP:${dtstamp}`,
-        `SUMMARY:${summary}`,
-        `DESCRIPTION:${description}`,
-        `LOCATION:${race.circuitName}, ${race.location}`,
-        `DTSTART;VALUE=DATE:${dtstart}`,
-        `DTEND;VALUE=DATE:${dtend}`,
-        'END:VEVENT'
-      ].join('\r\n');
+        const endDay = getNextSunday(new Date(startOfDay));
+        
+        const dtstart = startOfDay.toISOString().split('T')[0].replace(/-/g, '');
+        const dtend = endDay.toISOString().split('T')[0].replace(/-/g, '');
+        endDay.setDate(endDay.getDate() + 1);
+
+        vEvent = [
+            'BEGIN:VEVENT',
+            `UID:${uid}`,
+            `DTSTAMP:${dtstamp}`,
+            `SUMMARY:${summary}`,
+            `DESCRIPTION:${description}`,
+            `LOCATION:${race.circuitName}, ${race.location}`,
+            `DTSTART;VALUE=DATE:${dtstart}`,
+            `DTEND;VALUE=DATE:${endDay.toISOString().split('T')[0].replace(/-/g, '')}`,
+            'END:VEVENT'
+        ].join('\r\n');
     } else {
-      const dtstart = formatDateForICS(startDate);
-      endDate = getNextSunday(startDate);
-      const dtend = formatDateForICS(endDate);
-      
-      vEvent = [
-        'BEGIN:VEVENT',
-        `UID:${uid}`,
-        `DTSTAMP:${dtstamp}`,
-        `SUMMARY:${summary}`,
-        `DESCRIPTION:${description}`,
-        `LOCATION:${race.circuitName}, ${race.location}`,
-        `DTSTART:${dtstart}`,
-        `DTEND:${dtend}`,
-        'END:VEVENT'
-      ].join('\r\n');
+        const endDate = getNextSunday(new Date(startDate));
+        const dtstart = formatDateForICS(startDate);
+        const dtend = formatDateForICS(endDate);
+        
+        vEvent = [
+            'BEGIN:VEVENT',
+            `UID:${uid}`,
+            `DTSTAMP:${dtstamp}`,
+            `SUMMARY:${summary}`,
+            `DESCRIPTION:${description}`,
+            `LOCATION:${race.circuitName}, ${race.location}`,
+            `DTSTART:${dtstart}`,
+            `DTEND:${dtend}`,
+            'END:VEVENT'
+        ].join('\r\n');
     }
-
 
     const icsContent = [
       'BEGIN:VCALENDAR',

@@ -1,7 +1,7 @@
+
 // /src/app/api/calendar/all/route.ts
 import { NextResponse } from 'next/server';
 import { getRaceData } from '@/lib/data';
-import type { RaceEvent } from '@/types';
 
 function formatDateForICS(date: Date) {
   return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
@@ -10,7 +10,7 @@ function formatDateForICS(date: Date) {
 function getNextSunday(d: Date) {
   const date = new Date(d);
   const day = date.getDay();
-  const diff = (day === 0) ? 0 : (7 - day); // if it's already Sunday, diff is 0
+  const diff = day === 0 ? 0 : 7 - day;
   date.setDate(date.getDate() + diff);
   date.setHours(23, 59, 59, 999);
   return date;
@@ -34,28 +34,27 @@ export async function GET() {
       const dtstamp = formatDateForICS(new Date());
 
       if (race.id === 'tc2000') {
-        const startOfDay = new Date(startDate);
-        startOfDay.setHours(0, 0, 0, 0);
+          const startOfDay = new Date(startDate);
+          startOfDay.setUTCHours(0, 0, 0, 0);
 
-        const endDay = getNextSunday(new Date(startOfDay));
-        endDay.setDate(endDay.getDate() + 1);
-        
-        const dtstart = startOfDay.toISOString().split('T')[0].replace(/-/g, '');
-        const dtend = endDay.toISOString().split('T')[0].replace(/-/g, '');
-        
-        vEvent = [
-          'BEGIN:VEVENT',
-          `UID:${uid}`,
-          `DTSTAMP:${dtstamp}`,
-          `SUMMARY:${summary}`,
-          `DESCRIPTION:${description}`,
-          `LOCATION:${race.circuitName}, ${race.location}`,
-          `DTSTART;VALUE=DATE:${dtstart}`,
-          `DTEND;VALUE=DATE:${dtend}`,
-          'END:VEVENT'
-        ].join('\r\n');
+          const endDay = getNextSunday(new Date(startOfDay));
+          
+          const dtstart = startOfDay.toISOString().split('T')[0].replace(/-/g, '');
+          endDay.setDate(endDay.getDate() + 1);
+
+          vEvent = [
+              'BEGIN:VEVENT',
+              `UID:${uid}`,
+              `DTSTAMP:${dtstamp}`,
+              `SUMMARY:${summary}`,
+              `DESCRIPTION:${description}`,
+              `LOCATION:${race.circuitName}, ${race.location}`,
+              `DTSTART;VALUE=DATE:${dtstart}`,
+              `DTEND;VALUE=DATE:${endDay.toISOString().split('T')[0].replace(/-/g, '')}`,
+              'END:VEVENT'
+          ].join('\r\n');
       } else {
-        const endDate = getNextSunday(startDate);
+        const endDate = getNextSunday(new Date(startDate));
         const dtstart = formatDateForICS(startDate);
         const dtend = formatDateForICS(endDate);
         
