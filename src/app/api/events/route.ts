@@ -25,6 +25,7 @@ export async function GET() {
 
     const events = races.map(race => {
       const startDate = new Date(race.date);
+      startDate.setHours(startDate.getHours() + 3);
       const endDate = getNextSunday(startDate);
 
       return {
