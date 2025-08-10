@@ -1,39 +1,50 @@
-import { getRaceData } from '@/lib/data';
-import { RaceCard } from '@/components/RaceCard';
-import { Logo } from '@/components/ui/logo';
+import RaceCard from '@/components/RaceCard';
+import { RaceData } from '@/types';
+import { races, getEventData } from '@/lib/data';
 import { FooterActions } from '@/components/FooterActions';
+import { Logo } from '@/components/ui/logo';
+
+// Función para obtener los datos de todas las carreras en el servidor
+async function getEvents(): Promise<RaceData[]> {
+  try {
+    const allRacesData = await Promise.all(
+      races.map(race => getEventData(race.id))
+    );
+    // Filtramos los resultados nulos por si alguna categoría falla
+    return allRacesData.filter((data): data is RaceData => data !== null);
+  } catch (error) {
+    console.error('Error al cargar los eventos en el servidor:', error);
+    return [];
+  }
+}
 
 export default async function Home() {
-  const raceData = await getRaceData();
-  
+  const events = await getEvents();
+
+  // Creamos un mapa para buscar fácilmente los datos de cada carrera por su ID
+  const eventsMap = new Map(events.map(event => [event.id, event]));
+
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground font-body">
-      <header className="py-8 px-4 text-center border-b border-gray-800">
-         <div className="max-w-4xl mx-auto flex flex-col items-center gap-4">
-            <Logo />
-            <p className="text-lg text-muted-foreground max-w-2xl">
-                Toda la información de las próximas carreras de Turismo Carretera en un solo lugar.
-            </p>
-         </div>
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
+      <header className="container mx-auto p-4 flex justify-center items-center flex-col">
+          <Logo/>
+          <h1 className="text-3xl md:text-4xl font-bold text-center text-gray-800 dark:text-gray-200 mb-2">
+            TC-Chaser
+          </h1>
+          <p className='text-center text-muted-foreground'>Toda la info del Turismo Carretera, en un solo lugar.</p>
       </header>
-      <main className="flex-grow container mx-auto px-4 py-8 md:py-12">
-         {raceData.length > 0 ? (
-            <section className="flex flex-col items-center gap-8">
-              {raceData.map((race) => (
-                <RaceCard key={race.id} race={race} />
-              ))}
-            </section>
-          ) : (
-             <div className="text-center py-16">
-                <h2 className="text-2xl font-bold mb-4">No se pudieron cargar los datos de las carreras.</h2>
-                <p className="text-muted-foreground">Por favor, intente de nuevo más tarde.</p>
-             </div>
-          )}
+      
+      <main className="container mx-auto p-4 flex-grow">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {races.map((race) => {
+            const eventData = eventsMap.get(race.id);
+            return <RaceCard key={race.id} race={race} initialData={eventData} />;
+          })}
+        </div>
       </main>
-       <footer className="text-center py-6 px-4 border-t border-gray-800 text-muted-foreground text-sm">
-        <FooterActions />
-        <p className="mt-4">Desarrollado con ♥ para los fanáticos del automovilismo.</p>
-        <p>TC Chaser &copy; {new Date().getFullYear()}</p>
+
+      <footer className="w-full mt-8">
+          <FooterActions/>
       </footer>
     </div>
   );
